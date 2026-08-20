@@ -1,0 +1,179 @@
+[project]
+name = "fastarch"
+version = "0.1.0"
+description = "Production-grade FastAPI template built on Clean Architecture, Domain-Driven Design, CQRS, and SOLID principles."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115.6",
+    "uvicorn[standard]>=0.32.1",
+    "pydantic>=2.10.3",
+    "pydantic-settings>=2.7.0",
+    "email-validator>=2.2.0",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+    "redis>=5.2.1",
+    "arq>=0.26.3",
+    "pyjwt>=2.10.1",
+    "passlib[argon2]>=1.7.4",
+    "argon2-cffi>=23.1.0",
+    "structlog>=24.4.0",
+    "opentelemetry-api>=1.29.0",
+    "opentelemetry-sdk>=1.29.0",
+    "opentelemetry-instrumentation-fastapi>=0.50b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.50b0",
+    "opentelemetry-exporter-otlp-proto-http>=1.29.0",
+    "httpx>=0.28.1",
+    "tenacity>=9.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4",
+    "pytest-asyncio>=0.25.0",
+    "pytest-cov>=6.0.0",
+    "testcontainers[postgres,redis]>=4.9.0",
+    "polyfactory>=2.18.1",
+    "ruff>=0.8.4",
+    "mypy>=1.13.0",
+    "import-linter>=2.1",
+    "pre-commit>=4.0.1",
+    "pip-audit>=2.7.3",
+    "detect-secrets>=1.5.0",
+    "asgi-lifespan>=2.1.0",
+    "types-passlib>=1.7.7.20240819",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/app"]
+
+# ---------------------------------------------------------------------------
+# Ruff — linting, formatting, import ordering
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",      # pycodestyle / pyflakes
+    "I",                # isort
+    "UP",               # pyupgrade
+    "B",                # bugbear
+    "C4",               # comprehensions
+    "SIM",              # simplify
+    "N",                # pep8-naming
+    "RUF",              # ruff-specific
+    "ASYNC",            # async correctness
+    "S",                # bandit-lite security
+    "TID",              # tidy imports (ban relative imports across layers)
+]
+ignore = [
+    "S101",  # allow `assert` (used for type-narrowing and in tests)
+    "N818",  # `DomainException`/`ApplicationException` are the PRD-mandated names, no `Error` suffix
+    "UP046", # PEP 695 type params would require a blanket rewrite; Generic[T] stays consistent repo-wide
+    "UP047", # same rationale as UP046, for generic functions
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "S105", "S106"]
+"migrations/*" = ["N999"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.format]
+quote-style = "double"
+
+# ---------------------------------------------------------------------------
+# mypy — strict type checking
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.13"
+mypy_path = "src"
+explicit_package_bases = true
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_any_generics = true
+disallow_untyped_defs = true
+no_implicit_reexport = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["arq.*", "testcontainers.*", "passlib.*"]
+ignore_missing_imports = true
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+markers = [
+    "unit: pure unit tests with no infrastructure",
+    "integration: tests requiring Postgres/Redis (via testcontainers)",
+    "e2e: end-to-end HTTP tests against the full application",
+    "architecture: dependency-rule / layering tests",
+]
+filterwarnings = ["error::DeprecationWarning"]
+
+[tool.coverage.run]
+source = ["src/app"]
+branch = true
+omit = ["src/app/main.py"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+
+# ---------------------------------------------------------------------------
+# import-linter — enforces the Clean Architecture dependency rule (see
+# docs/dependency-rules.md and tests/architecture/test_layers.py)
+# ---------------------------------------------------------------------------
+[tool.importlinter]
+root_package = "app"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Domain layer is framework/infrastructure independent"
+type = "forbidden"
+source_modules = ["app.domain"]
+forbidden_modules = [
+    "fastapi", "starlette", "pydantic", "sqlalchemy", "alembic",
+    "redis", "arq", "httpx", "jwt", "passlib",
+    "app.application", "app.infrastructure", "app.presentation", "app.composition",
+]
+
+[[tool.importlinter.contracts]]
+name = "Application layer does not depend on frameworks/infrastructure/presentation"
+type = "forbidden"
+source_modules = ["app.application"]
+forbidden_modules = [
+    "fastapi", "starlette", "sqlalchemy", "alembic", "redis", "arq", "jwt", "passlib",
+    "app.infrastructure", "app.presentation", "app.composition",
+]
+
+[[tool.importlinter.contracts]]
+name = "Layers respect strict top-down layering"
+type = "layers"
+layers = [
+    "app.presentation",
+    "app.infrastructure",
+    "app.application",
+    "app.domain",
+]
+# app.composition and app.main deliberately sit outside this contract — the
+# composition root's whole job is wiring every layer together, so it must be
+# free to import all of them (see docs/dependency-rules.md).
