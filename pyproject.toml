@@ -127,7 +127,12 @@ markers = [
     "e2e: end-to-end HTTP tests against the full application",
     "architecture: dependency-rule / layering tests",
 ]
-filterwarnings = ["error::DeprecationWarning"]
+filterwarnings = [
+    "error::DeprecationWarning",
+    # testcontainers' own internals trip their own deprecation notice on import;
+    # nothing we can fix from application code.
+    "ignore:The @wait_container_is_ready decorator is deprecated:DeprecationWarning",
+]
 
 [tool.coverage.run]
 source = ["src/app"]

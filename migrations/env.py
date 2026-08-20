@@ -3,18 +3,17 @@ import sys
 from logging.config import fileConfig
 from pathlib import Path
 
+from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-
-from alembic import context
 
 # Make `app` importable when Alembic is invoked as a standalone CLI (it runs
 # with the repo root as cwd, not `src/`).
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from app.infrastructure.configuration.settings import get_settings  # noqa: E402
-from app.infrastructure.persistence.model_registry import Base  # noqa: E402
+from app.infrastructure.configuration.settings import get_settings
+from app.infrastructure.persistence.model_registry import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

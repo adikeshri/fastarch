@@ -97,7 +97,7 @@ def register_exception_handlers(app: FastAPI, settings: Settings) -> None:
     async def handle_invalid_input(request: Request, exc: DomainException) -> JSONResponse:
         return _problem_response(
             request,
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             title="Invalid Input",
             detail=str(exc),
         )
@@ -116,7 +116,7 @@ def register_exception_handlers(app: FastAPI, settings: Settings) -> None:
     ) -> JSONResponse:
         return _problem_response(
             request,
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             title="Validation Failed",
             detail="One or more fields failed validation",
             errors=exc.errors,
@@ -132,7 +132,7 @@ def register_exception_handlers(app: FastAPI, settings: Settings) -> None:
             errors.setdefault(field, []).append(error["msg"])
         return _problem_response(
             request,
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             title="Validation Failed",
             detail="One or more fields failed validation",
             errors=errors,

@@ -57,7 +57,9 @@ class SqlAlchemyUnitOfWork(UnitOfWork):
     async def commit(self) -> None:
         assert self._session is not None, "commit() called outside an 'async with' block"
         for event in self._pending_events:
-            self._session.add(_outbox_row_for(event))
+            self._session.add(
+                _outbox_row_for(event, max_attempts=self._settings.outbox_max_attempts)
+            )
         self._pending_events = []
         await self._session.commit()
 
@@ -67,7 +69,7 @@ class SqlAlchemyUnitOfWork(UnitOfWork):
         await self._session.rollback()
 
 
-def _outbox_row_for(event: DomainEvent) -> OutboxModel:
+def _outbox_row_for(event: DomainEvent, *, max_attempts: int) -> OutboxModel:
     payload = {
         key: (str(value) if isinstance(value, uuid.UUID | datetime) else value)
         for key, value in vars(event).items()
@@ -85,6 +87,7 @@ def _outbox_row_for(event: DomainEvent) -> OutboxModel:
         event_type=event.event_type,
         payload=payload,
         attempt_count=0,
+        max_attempts=max_attempts,
         created_at=now,
         available_at=now,
     )
