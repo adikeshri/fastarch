@@ -1,0 +1,30 @@
+# Minimal, ephemeral Postgres/Redis for integration/e2e tests in CI runners
+# where Docker-in-Docker for testcontainers isn't available. Local
+# development should prefer testcontainers (see tests/integration/conftest.py)
+# since it needs no manual setup/teardown — this compose file is the fallback.
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: fastarch_test
+      POSTGRES_PASSWORD: fastarch_test
+      POSTGRES_DB: fastarch_test
+    ports:
+      - "55432:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fastarch_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "56379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 10

@@ -1,0 +1,151 @@
+name: PR
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pr-${{ github.head_ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.5"
+  PYTHON_VERSION: "3.13"
+
+jobs:
+  lint:
+    name: Lint & format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+
+  typecheck:
+    name: Type check (mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync
+      - run: uv run mypy src
+
+  architecture:
+    name: Architecture / dependency rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync
+      - run: uv run lint-imports
+      - run: uv run pytest tests/architecture -m architecture
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync
+      - run: uv run pytest tests/unit -m unit --cov --cov-report=xml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-unit
+          path: coverage.xml
+
+  integration:
+    name: Integration tests (Postgres + Redis via testcontainers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync
+      - run: uv run pytest tests/integration -m integration
+
+  e2e:
+    name: End-to-end API tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync
+      - run: uv run pytest tests/e2e -m e2e
+
+  migrations:
+    name: Migrations apply cleanly to a fresh database
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: fastarch
+          POSTGRES_PASSWORD: fastarch
+          POSTGRES_DB: fastarch
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U fastarch"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync
+      - name: Upgrade to head
+        env:
+          DATABASE__URL: postgresql+asyncpg://fastarch:fastarch@localhost:5432/fastarch
+        run: uv run alembic upgrade head
+      - name: Downgrade to base
+        env:
+          DATABASE__URL: postgresql+asyncpg://fastarch:fastarch@localhost:5432/fastarch
+        run: uv run alembic downgrade base
+      - name: Upgrade to head again
+        env:
+          DATABASE__URL: postgresql+asyncpg://fastarch:fastarch@localhost:5432/fastarch
+        run: uv run alembic upgrade head
+
+  security:
+    name: Security checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync
+      - name: Dependency vulnerability scan
+        run: uv run pip-audit --strict
+      - name: Secret scan
+        run: uv run detect-secrets scan --baseline .secrets.baseline

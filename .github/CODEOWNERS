@@ -1,0 +1,8 @@
+# Default owners for everything in the repo, unless a later match takes precedence.
+* @your-org/backend-maintainers
+
+# The dependency-rule contract and architecture tests are the enforcement
+# mechanism for this template's whole premise — changes to them should get
+# extra scrutiny.
+/pyproject.toml @your-org/backend-maintainers
+/tests/architecture/ @your-org/backend-maintainers
