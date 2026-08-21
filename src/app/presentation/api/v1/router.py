@@ -1,8 +1,8 @@
 """Aggregates every v1 resource router under a single ``/v1`` prefix.
 
 Adding a new bounded context's API means adding one ``include_router`` call
-here — see ``docs/README`` "Adding a new bounded context" for the full
-checklist.
+here — see the root README's "Adding a new bounded context" section for the
+full checklist.
 """
 
 from __future__ import annotations
