@@ -62,7 +62,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Scan image for vulnerabilities
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: fastarch:${{ github.sha }}
           severity: CRITICAL,HIGH
@@ -80,5 +80,8 @@ jobs:
           enable-cache: true
       - run: uv python install ${{ env.PYTHON_VERSION }}
       - run: uv sync
-      - run: uv run pip-audit --strict
+      - name: Dependency vulnerability scan
+        run: |
+          uv export --no-hashes --prune fastarch --format requirements.txt -o /tmp/requirements-audit.txt
+          uv run pip-audit --strict -r /tmp/requirements-audit.txt
       - run: uv run detect-secrets scan --baseline .secrets.baseline

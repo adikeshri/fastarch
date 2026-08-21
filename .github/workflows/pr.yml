@@ -146,6 +146,8 @@ jobs:
       - run: uv python install ${{ env.PYTHON_VERSION }}
       - run: uv sync
       - name: Dependency vulnerability scan
-        run: uv run pip-audit --strict
+        run: |
+          uv export --no-hashes --prune fastarch --format requirements.txt -o /tmp/requirements-audit.txt
+          uv run pip-audit --strict -r /tmp/requirements-audit.txt
       - name: Secret scan
         run: uv run detect-secrets scan --baseline .secrets.baseline
