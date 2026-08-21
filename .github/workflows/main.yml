@@ -5,7 +5,6 @@ on:
     branches: [main]
 
 env:
-  UV_VERSION: "0.5"
   PYTHON_VERSION: "3.13"
 
 jobs:
@@ -29,7 +28,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
         with:
-          version: ${{ env.UV_VERSION }}
           enable-cache: true
       - run: uv python install ${{ env.PYTHON_VERSION }}
       - run: uv sync
@@ -76,12 +74,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
         with:
-          version: ${{ env.UV_VERSION }}
           enable-cache: true
       - run: uv python install ${{ env.PYTHON_VERSION }}
       - run: uv sync
       - name: Dependency vulnerability scan
         run: |
-          uv export --no-hashes --prune fastarch --format requirements.txt -o /tmp/requirements-audit.txt
+          uv export --no-hashes --prune fastarch --format requirements-txt -o /tmp/requirements-audit.txt
           uv run pip-audit --strict -r /tmp/requirements-audit.txt
       - run: uv run detect-secrets scan --baseline .secrets.baseline
