@@ -12,15 +12,24 @@ repos:
       - id: detect-private-key
       - id: mixed-line-ending
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.4
-    hooks:
-      - id: ruff
-        args: ["--fix"]
-      - id: ruff-format
-
   - repo: local
     hooks:
+      # Run through `uv run` (rather than the ruff-pre-commit mirror) so the
+      # hook always uses the exact ruff version pinned in uv.lock — a
+      # separately-pinned mirror can drift out of sync with rule sets
+      # (e.g. newer UP04x selectors) configured in pyproject.toml.
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+
       - id: mypy
         name: mypy (strict type checking)
         entry: uv run mypy src
