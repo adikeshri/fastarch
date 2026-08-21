@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------
 # Builder: resolve dependencies with uv into a self-contained virtualenv.
 # ---------------------------------------------------------------------------
-FROM python:3.13-slim AS builder
+FROM python:3.14-slim AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:0.12 /uv /uvx /bin/
 
@@ -26,7 +26,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # ---------------------------------------------------------------------------
 # Runtime: slim image, non-root user, no build toolchain.
 # ---------------------------------------------------------------------------
-FROM python:3.13-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 # Pull in whatever OS security patches have landed since this base image tag
 # was last rebuilt (the tag itself is a moving target, but not necessarily
